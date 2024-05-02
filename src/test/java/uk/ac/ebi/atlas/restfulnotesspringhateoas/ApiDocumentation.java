@@ -27,7 +27,6 @@ import org.springframework.hateoas.MediaTypes;
 import org.springframework.restdocs.RestDocumentationContextProvider;
 import org.springframework.restdocs.RestDocumentationExtension;
 import org.springframework.restdocs.constraints.ConstraintDescriptions;
-import org.springframework.restdocs.mockmvc.RestDocumentationResultHandler;
 import org.springframework.restdocs.payload.FieldDescriptor;
 import org.springframework.restdocs.payload.JsonFieldType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -35,17 +34,17 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.util.StringUtils;
 import org.springframework.web.context.WebApplicationContext;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.restdocs.headers.HeaderDocumentation.headerWithName;
 import static org.springframework.restdocs.headers.HeaderDocumentation.responseHeaders;
 import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.linkWithRel;
 import static org.springframework.restdocs.hypermedia.HypermediaDocumentation.links;
-import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
@@ -65,9 +64,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(RestDocumentationExtension.class)
 public class ApiDocumentation {
 
-
-	private RestDocumentationResultHandler documentationHandler;
-
 	@Autowired
 	private NoteRepository noteRepository;
 
@@ -84,14 +80,12 @@ public class ApiDocumentation {
 
 	@BeforeEach
 	void setUp(RestDocumentationContextProvider restDocumentation) {
-		this.documentationHandler = document("{method-name}",
-			preprocessRequest(prettyPrint()),
-			preprocessResponse(prettyPrint()));
-
 		this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
-			.apply(documentationConfiguration(restDocumentation))
-			.alwaysDo(this.documentationHandler)
-			.build();
+				.apply(documentationConfiguration(restDocumentation))
+				.alwaysDo(document("{method-name}/{step}/",
+						preprocessRequest(prettyPrint()),
+						preprocessResponse(prettyPrint())))
+				.build();
 	}
 
 	@Test
@@ -99,7 +93,7 @@ public class ApiDocumentation {
 		this.mockMvc
 			.perform(get("/"))
 			.andExpect(status().isOk())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				responseHeaders(
 					headerWithName("Content-Type").description("The Content-Type of the payload, e.g. `application/hal+json`"))));
 	}
@@ -116,7 +110,7 @@ public class ApiDocumentation {
 			.andExpect(jsonPath("timestamp", is(notNullValue())))
 			.andExpect(jsonPath("status", is(400)))
 			.andExpect(jsonPath("path", is(notNullValue())))
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				responseFields(
 					fieldWithPath("error").description("The HTTP error that occurred, e.g. `Bad Request`"),
 					fieldWithPath("message").description("A description of the cause of the error"),
@@ -129,7 +123,7 @@ public class ApiDocumentation {
 	void indexExample() throws Exception {
 		this.mockMvc.perform(get("/"))
 			.andExpect(status().isOk())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				links(
 					linkWithRel("notes").description("The <<resources_notes,Notes resource>>"),
 					linkWithRel("tags").description("The <<resources_tags,Tags resource>>")),
@@ -148,14 +142,14 @@ public class ApiDocumentation {
 		this.mockMvc
 			.perform(get("/notes"))
 			.andExpect(status().isOk())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				responseFields(
 					subsectionWithPath("_embedded.notes").description("An array of <<resources_note, Note resources>>"))));
 	}
 
 	@Test
 	void notesCreateExample() throws Exception {
-		Map<String, String> tag = new HashMap<String, String>();
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "REST");
 
 		String tagLocation = this.mockMvc
@@ -165,10 +159,10 @@ public class ApiDocumentation {
 			.andExpect(status().isCreated())
 			.andReturn().getResponse().getHeader("Location");
 
-		Map<String, Object> note = new HashMap<String, Object>();
+		Map<String, Object> note = new HashMap<>();
 		note.put("title", "REST maturity model");
 		note.put("body", "https://martinfowler.com/articles/richardsonMaturityModel.html");
-		note.put("tags", Arrays.asList(tagLocation));
+		note.put("tags", Collections.singletonList(tagLocation));
 
 		ConstrainedFields fields = new ConstrainedFields(NoteInput.class);
 
@@ -178,7 +172,7 @@ public class ApiDocumentation {
 				.content(this.objectMapper.writeValueAsString(note)))
 			.andExpect(
 				status().isCreated())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				requestFields(
 					fields.withPath("title").description("The title of the note"),
 					fields.withPath("body").description("The body of the note"),
@@ -187,7 +181,7 @@ public class ApiDocumentation {
 
 	@Test
 	void noteGetExample() throws Exception {
-		Map<String, String> tag = new HashMap<String, String>();
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "REST");
 
 		String tagLocation = this.mockMvc
@@ -197,10 +191,10 @@ public class ApiDocumentation {
 			.andExpect(status().isCreated())
 			.andReturn().getResponse().getHeader("Location");
 
-		Map<String, Object> note = new HashMap<String, Object>();
+		Map<String, Object> note = new HashMap<>();
 		note.put("title", "REST maturity model");
 		note.put("body", "https://martinfowler.com/articles/richardsonMaturityModel.html");
-		note.put("tags", Arrays.asList(tagLocation));
+		note.put("tags", Collections.singletonList(tagLocation));
 
 		String noteLocation = this.mockMvc
 			.perform(post("/notes")
@@ -216,7 +210,7 @@ public class ApiDocumentation {
 			.andExpect(jsonPath("body", is(note.get("body"))))
 			.andExpect(jsonPath("_links.self.href", is(noteLocation)))
 			.andExpect(jsonPath("_links.note-tags", is(notNullValue())))
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				links(
 					linkWithRel("self").description("This <<resources_note,note>>"),
 					linkWithRel("note-tags").description("This note's tags")),
@@ -239,14 +233,14 @@ public class ApiDocumentation {
 		this.mockMvc
 			.perform(get("/tags"))
 			.andExpect(status().isOk())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				responseFields(
 					subsectionWithPath("_embedded.tags").description("An array of <<resources_tag,Tag resources>>"))));
 	}
 
 	@Test
 	void tagsCreateExample() throws Exception {
-		Map<String, String> tag = new HashMap<String, String>();
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "REST");
 
 		ConstrainedFields fields = new ConstrainedFields(TagInput.class);
@@ -256,14 +250,14 @@ public class ApiDocumentation {
 				.contentType(MediaTypes.HAL_JSON)
 				.content(this.objectMapper.writeValueAsString(tag)))
 			.andExpect(status().isCreated())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				requestFields(
 					fields.withPath("name").description("The name of the tag"))));
 	}
 
 	@Test
 	void noteUpdateExample() throws Exception {
-		Map<String, Object> note = new HashMap<String, Object>();
+		Map<String, Object> note = new HashMap<>();
 		note.put("title", "REST maturity model");
 		note.put("body", "https://martinfowler.com/articles/richardsonMaturityModel.html");
 
@@ -282,7 +276,7 @@ public class ApiDocumentation {
 			.andExpect(jsonPath("_links.self.href", is(noteLocation)))
 			.andExpect(jsonPath("_links.note-tags", is(notNullValue())));
 
-		Map<String, String> tag = new HashMap<String, String>();
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "REST");
 
 		String tagLocation = this.mockMvc
@@ -292,8 +286,8 @@ public class ApiDocumentation {
 			.andExpect(status().isCreated())
 			.andReturn().getResponse().getHeader("Location");
 
-		Map<String, Object> noteUpdate = new HashMap<String, Object>();
-		noteUpdate.put("tags", Arrays.asList(tagLocation));
+		Map<String, Object> noteUpdate = new HashMap<>();
+		noteUpdate.put("tags", Collections.singletonList(tagLocation));
 
 		ConstrainedFields fields = new ConstrainedFields(NotePatchInput.class);
 
@@ -302,7 +296,7 @@ public class ApiDocumentation {
 				.contentType(MediaTypes.HAL_JSON)
 				.content(this.objectMapper.writeValueAsString(noteUpdate)))
 			.andExpect(status().isNoContent())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				requestFields(
 					fields.withPath("title")
 						.description("The title of the note")
@@ -318,7 +312,7 @@ public class ApiDocumentation {
 
 	@Test
 	void tagGetExample() throws Exception {
-		Map<String, String> tag = new HashMap<String, String>();
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "REST");
 
 		String tagLocation = this.mockMvc
@@ -332,7 +326,7 @@ public class ApiDocumentation {
 			.perform(get(tagLocation))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("name", is(tag.get("name"))))
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				links(
 					linkWithRel("self").description("This <<resources_tag,tag>>"),
 					linkWithRel("tagged-notes").description("The notes that have this tag")),
@@ -343,7 +337,7 @@ public class ApiDocumentation {
 
 	@Test
 	void tagUpdateExample() throws Exception {
-		Map<String, String> tag = new HashMap<String, String>();
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "REST");
 
 		String tagLocation = this.mockMvc
@@ -353,7 +347,7 @@ public class ApiDocumentation {
 			.andExpect(status().isCreated())
 			.andReturn().getResponse().getHeader("Location");
 
-		Map<String, Object> tagUpdate = new HashMap<String, Object>();
+		Map<String, Object> tagUpdate = new HashMap<>();
 		tagUpdate.put("name", "RESTful");
 
 		ConstrainedFields fields = new ConstrainedFields(TagPatchInput.class);
@@ -363,7 +357,7 @@ public class ApiDocumentation {
 				.contentType(MediaTypes.HAL_JSON)
 				.content(this.objectMapper.writeValueAsString(tagUpdate)))
 			.andExpect(status().isNoContent())
-			.andDo(this.documentationHandler.document(
+			.andDo(document("{method-name}",
 				requestFields(
 					fields.withPath("name").description("The name of the tag"))));
 	}

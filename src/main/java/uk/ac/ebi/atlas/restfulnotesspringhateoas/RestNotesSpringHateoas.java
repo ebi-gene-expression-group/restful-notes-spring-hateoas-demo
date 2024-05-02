@@ -4,10 +4,10 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class RestfulNotesSpringHateoasApplication {
+public class RestNotesSpringHateoas {
 
     public static void main(String[] args) {
-        SpringApplication.run(RestfulNotesSpringHateoasApplication.class, args);
+        SpringApplication.run(RestNotesSpringHateoas.class, args);
     }
 
 }

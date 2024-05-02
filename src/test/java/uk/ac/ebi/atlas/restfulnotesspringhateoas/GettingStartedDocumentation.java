@@ -16,7 +16,6 @@
 
 package uk.ac.ebi.atlas.restfulnotesspringhateoas;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,14 +32,13 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.io.UnsupportedEncodingException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.documentationConfiguration;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.patch;
@@ -51,6 +49,8 @@ import static org.springframework.restdocs.operation.preprocess.Preprocessors.pr
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import static com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper.document;
 
 @SpringBootTest
 @ExtendWith(RestDocumentationExtension.class)
@@ -83,7 +83,7 @@ public class GettingStartedDocumentation {
 	}
 
 	@Test
-	void creatingANote() throws JsonProcessingException, Exception {
+	void creatingANote() throws Exception {
 		String noteLocation = createNote();
 		MvcResult note = getNote(noteLocation);
 
@@ -99,18 +99,17 @@ public class GettingStartedDocumentation {
 	}
 
 	private String createNote() throws Exception {
-		Map<String, String> note = new HashMap<String, String>();
+		Map<String, String> note = new HashMap<>();
 		note.put("title", "Note creation with cURL");
 		note.put("body", "An example of how to create a note using cURL");
 
-		String noteLocation = this.mockMvc
+		return this.mockMvc
 				.perform(
 						post("/notes").contentType(MediaTypes.HAL_JSON).content(
 								objectMapper.writeValueAsString(note)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location", notNullValue()))
 				.andReturn().getResponse().getHeader("Location");
-		return noteLocation;
 	}
 
 	private MvcResult getNote(String noteLocation) throws Exception {
@@ -122,18 +121,17 @@ public class GettingStartedDocumentation {
 				.andReturn();
 	}
 
-	private String createTag() throws Exception, JsonProcessingException {
-		Map<String, String> tag = new HashMap<String, String>();
+	private String createTag() throws Exception {
+		Map<String, String> tag = new HashMap<>();
 		tag.put("name", "getting-started");
 
-		String tagLocation = this.mockMvc
+		return this.mockMvc
 				.perform(
 						post("/tags").contentType(MediaTypes.HAL_JSON).content(
 								objectMapper.writeValueAsString(tag)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location", notNullValue()))
 				.andReturn().getResponse().getHeader("Location");
-		return tagLocation;
 	}
 
 	private void getTag(String tagLocation) throws Exception {
@@ -143,19 +141,18 @@ public class GettingStartedDocumentation {
 	}
 
 	private String createTaggedNote(String tag) throws Exception {
-		Map<String, Object> note = new HashMap<String, Object>();
+		Map<String, Object> note = new HashMap<>();
 		note.put("title", "Tagged note creation with cURL");
 		note.put("body", "An example of how to create a tagged note using cURL");
-		note.put("tags", Arrays.asList(tag));
+		note.put("tags", Collections.singletonList(tag));
 
-		String noteLocation = this.mockMvc
+		return this.mockMvc
 				.perform(
 						post("/notes").contentType(MediaTypes.HAL_JSON).content(
 								objectMapper.writeValueAsString(note)))
 				.andExpect(status().isCreated())
 				.andExpect(header().string("Location", notNullValue()))
 				.andReturn().getResponse().getHeader("Location");
-		return noteLocation;
 	}
 
 	private void getTags(String noteTagsLocation) throws Exception {
@@ -165,8 +162,8 @@ public class GettingStartedDocumentation {
 	}
 
 	private void tagExistingNote(String noteLocation, String tagLocation) throws Exception {
-		Map<String, Object> update = new HashMap<String, Object>();
-		update.put("tags", Arrays.asList(tagLocation));
+		Map<String, Object> update = new HashMap<>();
+		update.put("tags", Collections.singletonList(tagLocation));
 
 		this.mockMvc.perform(
 				patch(noteLocation).contentType(MediaTypes.HAL_JSON).content(
